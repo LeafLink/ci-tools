@@ -1,0 +1,95 @@
+---
+version: 2.1
+
+# Reusable YAML fragments
+main-env: &main-env
+  docker:
+    - image: circleci/buildpack-deps:buster
+  environment:
+    AWS_ACCOUNT_ID: "<AWS acct number here>"
+    AWS_DEFAULT_REGION: "<AWS region here>"
+    # NOTE: assumes the following two env vars are defined securely in Circle CI:
+    #       AWS_ACCESS_KEY_ID
+    #       AWS_SECRET_ACCESS_KEY
+    # and that they have push access to the AWS acct's ECR repos
+
+setup-environment: &setup-environment
+  name: Setup Environment
+  command: ./ci/setup.sh
+
+check-for-docker-image: &check-for-docker-image
+  name: Check for Docker image
+  command: |
+    if [[ "$(docker images -q $DOCKER_IMAGE_BASE:$DOCKER_TAG)" == "" ]]; then
+      echo "Docker image not found in shared Docker environment! Rebuilding..."
+      << pipeline.parameters.build-command >>
+    else
+      echo "Docker image found in shared Docker environment! Skipping rebuild..."
+    fi
+
+# NOTE: accessible via << pipeline.parameters.XXXX >>
+parameters:
+  build-command:
+    type: string
+    default: |
+      echo "Building container tagged as $DOCKER_IMAGE_BASE:$DOCKER_TAG..."
+      docker build -t $DOCKER_IMAGE_BASE:$DOCKER_TAG .
+
+jobs:
+  build-docker:
+    <<: *main-env
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          <<: *setup-environment
+
+      - run:
+          name: Build Docker image
+          command: |
+            << pipeline.parameters.build-command >>
+
+  quality-checks:
+    <<: *main-env
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          <<: *setup-environment
+      - run:
+          <<: *check-for-docker-image
+
+      # Run quality checks here
+
+  push-image:
+    <<: *main-env
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          <<: *setup-environment
+      - run:
+          <<: *check-for-docker-image
+
+      - run:
+          name: Setup AWS CLI
+          command: ./ci/aws-cli.sh
+
+      - run:
+          name: Push Docker image to ECR
+          command: ./ci/push.sh
+
+workflows:
+  version: 2
+  ci:
+    jobs:
+      - build-docker
+      - quality-checks:
+          requires:
+            - build-docker
+      - push-image:
+          requires:
+            - quality-checks
