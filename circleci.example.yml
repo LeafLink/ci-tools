@@ -2,6 +2,21 @@
 version: 2.1
 
 # Reusable YAML fragments
+attach_workspace: &attach_workspace
+  attach_workspace:
+    at: /tmp
+
+check-for-docker-image: &check-for-docker-image
+  run:
+    name: Check for Docker image
+    command: |
+      if [[ "$(docker images -q $DOCKER_IMAGE_BASE:$DOCKER_TAG)" == "" ]]; then
+        echo "Docker image not found in shared Docker environment! Rebuilding..."
+        << pipeline.parameters.build-command >>
+      else
+        echo "Docker image found in shared Docker environment! Skipping rebuild..."
+      fi
+
 main-env: &main-env
   docker:
     - image: circleci/buildpack-deps:buster
@@ -14,20 +29,14 @@ main-env: &main-env
     # and that they have push access to the AWS acct's ECR repos
 
 setup-environment: &setup-environment
-  name: Setup Environment
-  command: ./ci/setup.sh
+  run:
+    name: Setup Environment
+    command: /tmp/build/setup.sh
 
-check-for-docker-image: &check-for-docker-image
-  name: Check for Docker image
-  command: |
-    if [[ "$(docker images -q $DOCKER_IMAGE_BASE:$DOCKER_TAG)" == "" ]]; then
-      echo "Docker image not found in shared Docker environment! Rebuilding..."
-      << pipeline.parameters.build-command >>
-    else
-      echo "Docker image found in shared Docker environment! Skipping rebuild..."
-    fi
+setup_remote_docker: &setup_remote_docker
+  setup_remote_docker:
+    docker_layer_caching: true
 
-# NOTE: accessible via << pipeline.parameters.XXXX >>
 parameters:
   build-command:
     type: string
@@ -36,15 +45,26 @@ parameters:
       docker build -t $DOCKER_IMAGE_BASE:$DOCKER_TAG .
 
 jobs:
+  download-ci-tools:
+    <<: *main-env
+    steps:
+      - run:
+          name: DL CI tools
+          command: |
+            curl https://raw.githubusercontent.com/leaflink/ci-tools/master/ecr/scripts.txt | wget -P /tmp/build/ -i -
+            chmod -R +x /tmp/build/*.sh
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - build
+
   build-docker:
     <<: *main-env
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run:
-          <<: *setup-environment
-
+      - *attach_workspace
+      - *setup_remote_docker
+      - *setup-environment
       - run:
           name: Build Docker image
           command: |
@@ -54,39 +74,38 @@ jobs:
     <<: *main-env
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - *attach_workspace
+      - *setup_remote_docker
+      - *setup-environment
+      - *check-for-docker-image
       - run:
-          <<: *setup-environment
-      - run:
-          <<: *check-for-docker-image
-
-      # Run quality checks here
+          name: Test code
+          command: |
+            echo "Add quality checks here...."
 
   push-image:
     <<: *main-env
     steps:
       - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run:
-          <<: *setup-environment
-      - run:
-          <<: *check-for-docker-image
-
+      - *attach_workspace
+      - *setup_remote_docker
+      - *setup-environment
+      - *check-for-docker-image
       - run:
           name: Setup AWS CLI
-          command: ./ci/aws-cli.sh
-
+          command: /tmp/build/aws-cli.sh
       - run:
           name: Push Docker image to ECR
-          command: ./ci/push.sh
+          command: /tmp/build/push.sh
 
 workflows:
   version: 2
   ci:
     jobs:
-      - build-docker
+      - download-ci-tools
+      - build-docker:
+          requires:
+            - download-ci-tools
       - quality-checks:
           requires:
             - build-docker
