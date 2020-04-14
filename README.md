@@ -9,7 +9,7 @@ Continuous Integration tooling for LeafLink source code repositories
 
 
 - [Usage](#usage)
-  * [CircleCI Example](#circleci-example) 
+  * [CircleCI Example](#circleci-example)
 - [Docker Registry Support](#docker-registry-support)
 - [Development Workflows](#development-workflows)
 - [Contributing](/.github/CONTRIBUTING.md)
@@ -20,7 +20,7 @@ This repository contains scripts tools that are intended to be used by LeafLink 
 
 ### CircleCI Example
 
-This repo contains a [CircleCI Example](.circleci.example.yml) file to illustrate how to download and use these scripts and tools within the CircleCI environment.
+This repo contains a [CircleCI Example](circleci.example.yml) file to illustrate how to download and use these scripts and tools within the CircleCI environment.
 
 ## Docker Registry Support
 
