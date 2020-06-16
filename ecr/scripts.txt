@@ -1,3 +1,4 @@
 https://raw.githubusercontent.com/leaflink/ci-tools/feature/bot-hooks/ecr/scripts/aws-cli.sh
+https://raw.githubusercontent.com/leaflink/ci-tools/feature/bot-hooks/ecr/scripts/notify-bot-start.sh
 https://raw.githubusercontent.com/leaflink/ci-tools/feature/bot-hooks/ecr/scripts/push.sh
 https://raw.githubusercontent.com/leaflink/ci-tools/feature/bot-hooks/ecr/scripts/setup.sh

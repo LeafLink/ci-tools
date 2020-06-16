@@ -13,11 +13,3 @@ DOCKER_TAG="${CIRCLE_SHA1:0:7}"
 echo "export CIRCLE_TAG='${CIRCLE_TAG}'" >> $BASH_ENV
 echo "export DOCKER_IMAGE_BASE='${AWS_ECR_BASE}/${CIRCLE_PROJECT_REPONAME}'" >> $BASH_ENV
 echo "export DOCKER_TAG='${DOCKER_TAG}'" >> $BASH_ENV
-
-# Inform LLP bot that a build started
-if [[ ! -z "${BOT_WEBHOOK_URL}" ]] && [[ ! -z "${BOT_WEBHOOK_TOKEN}" ]]; then
-    echo "Informing bot that build started..."
-    echo "    DEBUG: Webhook URL - ${BOT_WEBHOOK_URL}"
-    echo "    DEBUG: Tag - ${DOCKER_TAG}"
-    echo "    DEBUG: Repo - ${CIRCLE_PROJECT_REPONAME}"
-fi
