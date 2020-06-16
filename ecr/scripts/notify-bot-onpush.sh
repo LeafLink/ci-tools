@@ -2,7 +2,7 @@
 
 set -e
 
-# Inform LLP bot that a build started
+# Inform LLP bot that a tag has been pushed
 if [[ ! -z "${BOT_WEBHOOK_URL}" ]] && [[ ! -z "${BOT_WEBHOOK_TOKEN}" ]]; then
     echo "Informing bot that build completed..."
     echo "    DEBUG: Webhook URL - ${BOT_WEBHOOK_URL}"
