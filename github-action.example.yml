@@ -1,0 +1,94 @@
+name: llp-ci
+
+on:
+  # Tells GitHub Actions to run this workflow for every git push,
+  # when a PR is opened or updated, and when a release (i.e. semver tag)
+  # is published (NOTE: this is what LLoyd does during releases)
+  push:
+  pull_request:
+  release:
+    types: [published]
+
+env:
+  # Both of these env variables are used to determine the appropriate Docker tagging
+  # scheme to use when building / pushing Docker images
+  PR_NUMBER: ${{ github.event.number }}
+  RELEASE_TAG: ${{ github.event.release.tag_name }}
+
+jobs:
+  # Builds and pushes a Docker image to the ECR image repository
+  # for the repo this workflow is run under
+  # 
+  # NOTE: uses DOCKER_TAGS to push 1+ image tags to ECR
+  # For more information on our tagging strategy, see
+  # https://github.com/LeafLink/setup-ga-environment-action#a-note-about-docker-tagging
+  build-and-push-docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: leaflink/setup-ga-environment-action@0.2.0 # Custom LeafLink action to set up env vars
+      - name: Build and push image to ECR
+        uses: kciter/aws-ecr-action@master
+        with: 
+          access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }} # NOTE: these secrets is set at the LeafLink GitHub org level
+          secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          account_id: ${{ env.AWS_ACCOUNT_ID }}
+          region: ${{ env.AWS_REGION }}
+          repo: ${{ env.REPO_NAME }}
+          create_repo: true
+          tags: ${{ env.DOCKER_TAGS }}
+
+  # Runs post-build and should be where your actual CI checks occur
+  # 
+  # NOTE: pulls down the image created in the first job. You may find that combining
+  # this job and the "build-and-push-docker-image" job speeds up builds considerably
+  # if you don't require parallel CI job execution
+  quality-checks:
+    runs-on: ubuntu-latest
+    needs: build-and-push-docker-image
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: leaflink/setup-ga-environment-action@0.2.0
+      - name: Pull image from Docker registry
+        uses: jwalton/gh-ecr-push@v1.0.0
+        with:
+          access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: ${{ env.AWS_REGION }}
+          image: ${{ env.REPO_NAME }}:${{ env.DOCKER_TAG }}
+          direction: pull
+      # Example CI checks
+      - name: Lint code
+        run: docker run $REPO_NAME:$DOCKER_TAG make lint-check
+      - name: Test code
+        run: docker run $REPO_NAME:$DOCKER_TAG make test
+
+  # The following two jobs notify LLoyd that a GitHub Action has started
+  # and a build has completed
+  # 
+  # NOTE: these two jobs only run on semver builds
+  notify-bot-build-started:
+    runs-on: ubuntu-latest
+    if: github.event.release.tag_name != ''
+    steps:
+      - uses: leaflink/setup-ga-environment-action@0.2.0
+      - name: Call bot webhook
+        uses: leaflink/lloyd-webhook-action@0.0.11 # Custom LeafLink action the wraps cURL calls to LLoyd webhooks
+        with:
+          webhook_url: ${{ secrets.LLOYD_WEBHOOK_URL }}
+          webhook_token: ${{ secrets.LLOYD_WEBHOOK_TOKEN }}
+          event: build_started
+
+  notify-bot-push-completed:
+    runs-on: ubuntu-latest
+    needs: build-and-push-docker-image
+    if: github.event.release.tag_name != ''
+    steps:
+      - uses: leaflink/setup-ga-environment-action@0.2.0
+      - name: Call bot webhook
+        uses: leaflink/lloyd-webhook-action@0.0.11
+        with:
+          webhook_url: ${{ secrets.LLOYD_WEBHOOK_URL }}
+          webhook_token: ${{ secrets.LLOYD_WEBHOOK_TOKEN }}
+          event: tag_pushed
