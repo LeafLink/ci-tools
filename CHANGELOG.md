@@ -1,7 +1,13 @@
 # Changelog
 ---
 
-## [0.3.0](https://github.com/LeafLink/ci-tools/releases/tag/0.3.0) ([compare](https://github.com/LeafLink/ci-tools/compare/0.2.0...0.3.0))
+## [0.3.1](https://github.com/LeafLink/ci-tools/releases/tag/0.3.1) ([compare](https://github.com/LeafLink/ci-tools/compare/0.3.0...0.3.1))
+
+### Removed
+- Removes CircleCI and adds GitHub Actions support ([d45e0a7](https://github.com/LeafLink/ci-tools/commit/d45e0a796f83086d7da7947d3097af2f992c48da)).
+
+
+## [0.3.0](https://github.com/LeafLink/ci-tools/releases/tag/0.3.0) ([compare](https://github.com/LeafLink/ci-tools/compare/0.2.0...0.3.0)) - 2020-06-16
 
 ### Added
 - Adds tag pushed event, updates scripts ([35c9297](https://github.com/LeafLink/ci-tools/commit/35c9297c8cf14c62e41c6a803eb2ab523632dfa6)).
@@ -17,6 +23,7 @@
 - Test 4 ([b970ef5](https://github.com/LeafLink/ci-tools/commit/b970ef5ea2f7d18d43b2fde32cabe53df9f05742)).
 - Test 5 ([daac1d0](https://github.com/LeafLink/ci-tools/commit/daac1d05be53e9b460628d3383780be4c056b2ac)).
 - Test 6 ([89988bc](https://github.com/LeafLink/ci-tools/commit/89988bc7fb8b139ee930dc8ee2c2813d064833b8)).
+- Updated files for release 0.3.0 ([c4c20de](https://github.com/LeafLink/ci-tools/commit/c4c20dedeb451212031297e815e7916a3e2599a4)).
 
 
 ## [0.2.0](https://github.com/LeafLink/ci-tools/releases/tag/0.2.0) ([compare](https://github.com/LeafLink/ci-tools/compare/0.1.0...0.2.0)) - 2020-04-08
